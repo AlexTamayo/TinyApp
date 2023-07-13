@@ -75,6 +75,12 @@ app.get("/urls/new", (req, res) => {
   const templateVars = {
     user: users[userId],
   };
+
+  if (!users[userId]) {
+    return res.redirect('/login');
+  }
+
+
   res.render("urls_new", templateVars);
 });
 
@@ -85,6 +91,11 @@ app.get("/login",(req, res) => {
   const templateVars = {
     user: users[userId],
   };
+
+  if (users[userId]) {
+    return res.redirect('/urls');
+  }
+
   res.render("urls_login", templateVars);
 });
 
@@ -95,15 +106,26 @@ app.get("/register",(req, res) => {
   const templateVars = {
     user: users[userId],
   };
+
+  if (users[userId]) {
+    return res.redirect('/urls');
+  }
+
   res.render("urls_register", templateVars);
 });
 
 
 // URLS - POST
 app.post("/urls", (req, res) => {
+  const userId = req.cookies["user_id"];
   const shortURL = generateRandomString(6);
   const longURL = req.body.longURL;
   urlDatabase[shortURL] = longURL;
+
+  if (!users[userId]) {
+    return res.send('You need to log in to be able to shorten URLs');
+  }
+
   res.redirect('/urls');
 });
 
@@ -144,12 +166,12 @@ app.post("/login",(req, res) => {
   const password = req.body.password;
   const user = userEmail(email);
   if (!user) {
-    // res.send("no such email in DB");
+    res.send("either your email or password is wrong, fam");
     return res.status(403);
   }
   
   if (user.password !== password) {
-    // res.send("pasuworudo no machi");
+    res.send("either your email or password is wrong, fam");
     return res.status(403);
   }
 
@@ -180,15 +202,24 @@ app.get("/urls/:id", (req, res) => {
 // REDIRECT ID - GET
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id];
+  if (!longURL) {
+    return res.status(404).send("That's a 404, bruv");
+  }
   res.redirect(longURL);
 });
 
 
 // URLS ID - POST
 app.post("/urls/:id", (req, res) => {
+  const userId = req.cookies["user_id"];
+  if (!users[userId]) {
+    return res.send('You need to log in to be able to shorten URLs');
+  }
   const shortURL = req.params.id;
   const newLongURL = req.body.longURL;
   urlDatabase[shortURL] = newLongURL;
+
+  
   res.redirect('/urls');
 });
 
