@@ -20,6 +20,24 @@
         <p class="card-text">
           Short URL ID: <a href="/u/<%= id %>"><%= id %></a>
         </p>
+        <div class="card-header">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">Edit</h5>
+            <form class="form-inline justify-content-center" action="/urls/<%= id %>" method="POST">
+              <div class="form-group mb-2  d-flex">
+                <label for="longURL">New URL:</label>
+                  <input
+                  class="form-control"
+                  type="text"
+                  name="longURL"
+                  placeholder= <%= longURL %>
+                  style="width: 350px; margin: auto"
+                  />
+                  <button type="submit" class="btn btn-primary">Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
       <div class="card-footer text-muted"></div>
     </div>
