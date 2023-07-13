@@ -66,6 +66,13 @@ app.post("/login",(req, res) => {
   res.redirect('/urls');
 });
 
+app.post("/logout",(req, res) => {
+  // const username = req.body["username"];
+  // res.cookie('username', username);
+  res.clearCookie('username');
+  res.redirect('/urls');
+});
+
 app.get("/urls/:id", (req, res) => {
   const templateVars = {
     id: req.params.id,
