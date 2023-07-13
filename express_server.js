@@ -9,9 +9,10 @@ app.use(cookieParser());
 
 
 const urlDatabase = {
+  "54d5sd": "http://www.alexandertamayo.com",
+  "Rd7fh6": "http://search.brave.com",
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com",
-  "54d5sd": "http://www.alexandertamayo.com"
 };
 
 const generateRandomString = function(lenght) {
@@ -53,6 +54,13 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
+app.get("/register",(req, res) => {
+  const templateVars = {
+    username: req.cookies["username"],
+  };
+  res.render("urls_register", templateVars);
+});
+
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString(6);
   const longURL = req.body["longURL"];
@@ -67,8 +75,6 @@ app.post("/login",(req, res) => {
 });
 
 app.post("/logout",(req, res) => {
-  // const username = req.body["username"];
-  // res.cookie('username', username);
   res.clearCookie('username');
   res.redirect('/urls');
 });
