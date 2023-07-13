@@ -15,8 +15,8 @@
   <%- include('partials/_header') %>
 
     <main style="margin: 2em;">
-      <form style="display: flex; flex-direction: column; align-items: center;" action="/register" method="POST">
-        <h3>Register</h3>
+      <form style="display: flex; flex-direction: column; align-items: center;" action="/login" method="POST">
+        <h3>Log In</h3>
         <div class="form-group mb-2" style="display: flex; justify-content: space-between; align-items: center; width: 300px;">
           <label for="email" style="margin-right: 1em;">email:</label>
           <input
@@ -36,7 +36,7 @@
             style="width: 70%;" />
         </div>
         <div style="display: flex; justify-content: center;">
-          <button type="submit" class="btn btn-warning">Register</button>
+          <button type="submit" class="btn btn-success">Log In</button>
         </div>
       </form>
     </main>
