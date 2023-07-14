@@ -1,13 +1,16 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
-const cookieParser = require('cookie-parser');
+const { generateRandomString, getUserByEmail, userUrlObj } = require('./helpers');
+const { urlDatabase, users } = require('./database');
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 3000; // default port 8080
 
+const passwordMatch = bcrypt.compareSync;
+
 
 app.set("view engine", "ejs");
-app.use(cookieParser());
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieSession({
@@ -19,87 +22,11 @@ app.use(cookieSession({
 }));
 
 
-const urlDatabase = {
-  "b6UTxQ": {
-    longURL: "https://www.tsn.ca",
-    userID: "def",
-  },
-  "9sm5xK": {
-    longURL: "https://www.google.com",
-    userID: "abc",
-  },
-  "54d5sd": {
-    longURL: "https://www.alexandertamayo.com",
-    userID: "ale",
-  },
-  "Rd7fh6": {
-    longURL: "https://search.brave.com",
-    userID: "ale",
-  },
-};
-
-
-
-const users = {
-  abc: {
-    id: "abc",
-    email: "a@a.com",
-    // password: "123",
-    password: "$2a$10$SmWPbTdY22SFZG/nN4dtS.b6jgc.mZVVvHLgVuXUau6Zf.pyKa8su",
-  },
-  def: {
-    id: "def",
-    email: "d@d.com",
-    // password: "456",
-    password: "$2a$10$0ZpnVIvB.bVZ2N4vqSDzpOBx.gCcsB/ZzhZptU/fM3go5tZQZxroG",
-  },
-  ale: {
-    id: "ale",
-    email: "alex@t.com",
-    // password: "asd",
-    password: "$2a$10$n6HbDKD6wcociMz8L6f17OX/Lx5DcRRKXzLEFktACpkjTWufT3SK.",
-  },
-};
-
-
 // MESSAGES
 const needToLogin = 'You need to log in to be able to shorten URLs';
 const emailOrPassword = "either your email or password is wrong, fam";
 const notYours = "Bruv, this isn't yours to edit!!";
 const fourOhFour = "That's a 404, bruv";
-
-
-const generateRandomString = function(length) {
-  return Math.random().toString(36).substring(2, length + 2);
-};
-
-
-const userEmail = function(email) {
-  let foundUser = null;
-
-  for (const userId in users) {
-    if (email === users[userId].email) {
-      return users[userId];
-    }
-  }
-  return foundUser;
-};
-
-
-const userUrlObj = function(userId) {
-  const userURLs = {};
-  for (const urlID in urlDatabase) {
-
-    if (urlDatabase[urlID].userID === userId) {
-      userURLs[urlID] = urlDatabase[urlID].longURL;
-    }
-  }
-  return userURLs;
-};
-
-const passwordMatch = function(inputPW, storedHashPW) {
-  return bcrypt.compareSync(inputPW, storedHashPW);
-};
 
 
 
@@ -113,7 +40,7 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
   const templateVars = {
-    urls: userUrlObj(userId),
+    urls: userUrlObj(userId, urlDatabase),
     user: users[userId],
   };
 
@@ -200,7 +127,7 @@ app.post("/register", (req, res) => {
   }
 
   // email already in DB
-  if (userEmail(email)) {
+  if (getUserByEmail(email, users)) {
     return res.status(400);
   }
 
@@ -224,7 +151,7 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = userEmail(email);
+  const user = getUserByEmail(email, users);
   if (!user) {
     res.send(emailOrPassword);
     return res.status(403);
