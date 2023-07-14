@@ -29,63 +29,16 @@ const notYours = "Bruv, this isn't yours to edit!!";
 const fourOhFour = "That's a 404, bruv";
 
 
-
 // HOME - GET
 app.get("/", (req, res) => {
   res.redirect('/login');
 });
 
 
-// URLS - GET
-app.get("/urls", (req, res) => {
-  const userId = req.session.user_id;
-  const templateVars = {
-    urls: userUrlObj(userId, urlDatabase),
-    user: users[userId],
-  };
-
-  if (!users[userId]) {
-    return res.status(403).send(needToLogin);
-  }
-
-  res.render("urls_index", templateVars);
-});
-
-
-// NEW TINY URL - GET
-app.get("/urls/new", (req, res) => {
-  const userId = req.session.user_id;
-  const templateVars = {
-    user: users[userId],
-  };
-
-  if (!users[userId]) {
-    return res.redirect('/login');
-  }
-
-
-  res.render("urls_new", templateVars);
-});
-
-
-// LOGIN - GET
-app.get("/login", (req, res) => {
-  const userId = req.session.user_id;
-  const templateVars = {
-    user: users[userId],
-  };
-
-  if (users[userId]) {
-    return res.redirect('/urls');
-  }
-
-  res.render("urls_login", templateVars);
-});
-
-
 // REGISTER - GET
 app.get("/register", (req, res) => {
   const userId = req.session.user_id;
+
   const templateVars = {
     user: users[userId],
   };
@@ -98,52 +51,50 @@ app.get("/register", (req, res) => {
 });
 
 
-// URLS - POST
-app.post("/urls", (req, res) => {
-  const userId = req.session.user_id;
-  const shortURL = generateRandomString(6);
-  const longURL = req.body.longURL;
-
-  urlDatabase[shortURL] = { longURL: longURL, userID: userId };
-
-  if (!users[userId]) {
-    return res.send(needToLogin);
-  }
-
-  res.redirect('/urls');
-});
-
-
 // REGISTER - POST
 app.post("/register", (req, res) => {
-  const id = generateRandomString(3);
   const email = req.body.email;
   const password = req.body.password;
-  const hashedPW = bcrypt.hashSync(password,10);
 
   if (!email || !password) {
-    res.send(emailOrPassword);
-    return res.status(400);
+    return res.status(400).send(emailOrPassword);
   }
 
   // email already in DB
   if (getUserByEmail(email, users)) {
-    return res.status(400);
+    return res.status(400).send('email already exists');
   }
 
-  const registryObj = {
+  const id = generateRandomString(3);
+  const hashedPW = bcrypt.hashSync(password, 10);
+
+  const userRegistryObj = {
     id: id,
     email: email,
     password: hashedPW,
   };
 
-  users[id] = registryObj;
-  
-  console.log(users);
-  
-  res.cookie('user_id', id);
+  users[id] = userRegistryObj;
+
+  req.session.user_id = id;
 
   res.redirect('/urls');
+});
+
+
+// LOGIN - GET
+app.get("/login", (req, res) => {
+  const userId = req.session.user_id;
+
+  const templateVars = {
+    user: users[userId],
+  };
+
+  if (users[userId]) {
+    return res.redirect('/urls');
+  }
+
+  res.render("urls_login", templateVars);
 });
 
 
@@ -152,15 +103,13 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUserByEmail(email, users);
+
   if (!user) {
-    res.send(emailOrPassword);
-    return res.status(403);
+    return res.status(403).send(emailOrPassword);
   }
 
-
   if (!passwordMatch(password, user.password)) {
-    res.send(emailOrPassword);
-    return res.status(403);
+    return res.status(403).send(emailOrPassword);
   }
 
   req.session.user_id = user.id;
@@ -176,19 +125,68 @@ app.post("/logout", (req, res) => {
 });
 
 
+// URLS - GET
+app.get("/urls", (req, res) => {
+  const userId = req.session.user_id;
+
+  const templateVars = {
+    urls: userUrlObj(userId, urlDatabase),
+    user: users[userId],
+  };
+
+  if (!users[userId]) {
+    return res.status(403).send(needToLogin);
+  }
+
+  res.render("urls_index", templateVars);
+});
+
+
+// URLS - POST
+app.post("/urls", (req, res) => {
+  const userId = req.session.user_id;
+
+  if (!users[userId]) {
+    return res.status(403).send(needToLogin);
+  }
+
+  const shortURL = generateRandomString(6);
+  const longURL = req.body.longURL;
+  urlDatabase[shortURL] = { longURL: longURL, userID: userId };
+
+  res.redirect(`/urls/${shortURL}`);
+});
+
+
+// NEW TINY URL - GET
+app.get("/urls/new", (req, res) => {
+  const userId = req.session.user_id;
+
+  const templateVars = {
+    user: users[userId],
+  };
+
+  if (!users[userId]) {
+    return res.redirect('/login');
+  }
+
+  res.render("urls_new", templateVars);
+});
+
+
 // URLS ID - GET
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const userId = req.session.user_id;
-  
+
   if (!urlDatabase[id]) {
     return res.status(404).send(fourOhFour);
   }
-  
+
   if (!users[userId]) {
     return res.status(403).send(needToLogin);
   }
-  
+
   if (urlDatabase[id].userID !== userId) {
     return res.status(403).send(notYours);
   }
@@ -203,24 +201,21 @@ app.get("/urls/:id", (req, res) => {
 });
 
 
-// REDIRECT ID - GET
-app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id].longURL;
-
-  if (!longURL) {
-    return res.status(404).send(fourOhFour);
-  }
-
-  res.redirect(longURL);
-});
-
-
 // URLS ID - POST
 app.post("/urls/:id", (req, res) => {
   const userId = req.session.user_id;
+  const id = req.params.id;
 
   if (!users[userId]) {
-    return res.send(needToLogin);
+    return res.status(403).send(needToLogin);
+  }
+
+  if (!urlDatabase[id]) {
+    return res.status(404).send(fourOhFour);
+  }
+
+  if (urlDatabase[id].userID !== userId) {
+    return res.status(403).send(notYours);
   }
 
   const shortURL = req.params.id;
@@ -232,19 +227,32 @@ app.post("/urls/:id", (req, res) => {
 });
 
 
+// REDIRECT ID - GET
+app.get("/u/:id", (req, res) => {
+
+  if (!urlDatabase[req.params.id]) {
+    return res.status(404).send(fourOhFour);
+  }
+
+  const longURL = urlDatabase[req.params.id].longURL;
+
+  res.redirect(longURL);
+});
+
+
 // URL ID DELETE - POST
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
   const userId = req.session.user_id;
-  
+
   if (!urlDatabase[id]) {
     return res.status(404).send(fourOhFour);
   }
-  
+
   if (urlDatabase[id].userID !== userId) {
     return res.status(403).send(notYours);
   }
-  
+
   if (!users[userId]) {
     return res.status(403).send(needToLogin);
   }
