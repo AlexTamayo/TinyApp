@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieParser = require('cookie-parser');
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 3000; // default port 8080
 
@@ -34,25 +35,28 @@ const users = {
   abc: {
     id: "abc",
     email: "a@a.com",
-    password: "123",
+    // password: "123",
+    password: "$2a$10$SmWPbTdY22SFZG/nN4dtS.b6jgc.mZVVvHLgVuXUau6Zf.pyKa8su",
   },
   def: {
     id: "def",
     email: "d@d.com",
-    password: "456",
+    // password: "456",
+    password: "$2a$10$0ZpnVIvB.bVZ2N4vqSDzpOBx.gCcsB/ZzhZptU/fM3go5tZQZxroG",
   },
   ale: {
     id: "ale",
     email: "alex@t.com",
-    password: "asd",
+    // password: "asd",
+    password: "$2a$10$n6HbDKD6wcociMz8L6f17OX/Lx5DcRRKXzLEFktACpkjTWufT3SK.",
   },
 };
 
 
 // MESSAGES
-const needToLog = 'You need to log in to be able to shorten URLs';
-const emailOrPass = "either your email or password is wrong, fam";
-const notYourss = "Bruv, this isn't yours to edit!!";
+const needToLogin = 'You need to log in to be able to shorten URLs';
+const emailOrPassword = "either your email or password is wrong, fam";
+const notYours = "Bruv, this isn't yours to edit!!";
 const fourOhFour = "That's a 404, bruv";
 
 
@@ -84,6 +88,10 @@ const userUrlObj = function(userId) {
   return userURLs;
 };
 
+const passwordMatch = function(inputPW, storedHashPW) {
+  return bcrypt.compareSync(inputPW, storedHashPW);
+};
+
 
 
 // HOME - GET
@@ -101,7 +109,7 @@ app.get("/urls", (req, res) => {
   };
 
   if (!users[userId]) {
-    return res.status(403).send(needToLog);
+    return res.status(403).send(needToLogin);
   }
 
   res.render("urls_index", templateVars);
@@ -163,7 +171,7 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = { longURL: longURL, userID: userId };
 
   if (!users[userId]) {
-    return res.send(needToLog);
+    return res.send(needToLogin);
   }
 
   res.redirect('/urls');
@@ -175,9 +183,10 @@ app.post("/register", (req, res) => {
   const id = generateRandomString(3);
   const email = req.body.email;
   const password = req.body.password;
+  const hashedPW = bcrypt.hashSync(password,10);
 
   if (!email || !password) {
-    // res.send('No email or password');
+    res.send(emailOrPassword);
     return res.status(400);
   }
 
@@ -189,11 +198,13 @@ app.post("/register", (req, res) => {
   const registryObj = {
     id: id,
     email: email,
-    password: password,
+    password: hashedPW,
   };
 
   users[id] = registryObj;
-
+  
+  console.log(users);
+  
   res.cookie('user_id', id);
 
   res.redirect('/urls');
@@ -206,12 +217,13 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
   const user = userEmail(email);
   if (!user) {
-    res.send(emailOrPass);
+    res.send(emailOrPassword);
     return res.status(403);
   }
 
-  if (user.password !== password) {
-    res.send(emailOrPass);
+
+  if (!passwordMatch(password, user.password)) {
+    res.send(emailOrPassword);
     return res.status(403);
   }
 
@@ -237,11 +249,11 @@ app.get("/urls/:id", (req, res) => {
   }
   
   if (!users[userId]) {
-    return res.status(403).send(needToLog);
+    return res.status(403).send(needToLogin);
   }
   
   if (urlDatabase[id].userID !== userId) {
-    return res.status(403).send(notYourss);
+    return res.status(403).send(notYours);
   }
 
   const templateVars = {
@@ -271,7 +283,7 @@ app.post("/urls/:id", (req, res) => {
   const userId = req.cookies["user_id"];
 
   if (!users[userId]) {
-    return res.send(needToLog);
+    return res.send(needToLogin);
   }
 
   const shortURL = req.params.id;
@@ -294,11 +306,11 @@ app.post("/urls/:id/delete", (req, res) => {
   }
   
   if (urlDatabase[id].userID !== userId) {
-    return res.status(403).send(notYourss);
+    return res.status(403).send(notYours);
   }
   
   if (!users[userId]) {
-    return res.status(403).send(needToLog);
+    return res.status(403).send(needToLogin);
   }
 
   delete urlDatabase[id];
